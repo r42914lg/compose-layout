@@ -1,8 +1,8 @@
 package com.r42914lg.composecustom.modifier
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -12,7 +12,6 @@ import androidx.compose.ui.node.DrawModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 
 class Semaphore(
     var color1: Color,
@@ -27,6 +26,7 @@ class Semaphore(
         translate(top = size.minDimension / 3) {
             drawCircle(color3, size.minDimension / 6)
         }
+        drawContent()
     }
 }
 data class SemaphoreElement(
@@ -55,10 +55,10 @@ fun Modifier.semaphore(color1: Color, color2: Color, color3: Color) =
 @Preview
 @Composable
 fun PreviewSemaphore() {
-    Box(
-        modifier = Modifier
-            .size(50.dp)
-            .background(Color.White)
-            .semaphore(Color.Red, Color.Yellow, Color.Green)
-    )
+        Text(
+            text = "SAMPLE",
+            modifier = Modifier
+                .background(Color.White)
+                .semaphore(Color.Red, Color.Yellow, Color.Green)
+        )
 }
