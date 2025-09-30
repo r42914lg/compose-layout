@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
@@ -49,12 +50,15 @@ class SomeRouterImpl(default: Screen) : Router {
 }
 
 val localRouter = staticCompositionLocalOf<Router?> { null }
+val localRouterProvidable: ProvidableCompositionLocal<Router> = staticCompositionLocalOf {
+    error("Router not initialized")
+}
 
 @Composable
 fun AppContent(
     defaultScreen: Screen
 ) {
-    CompositionLocalProvider(localRouter provides SomeRouterImpl(defaultScreen)) {
+    CompositionLocalProvider(localRouterProvidable provides SomeRouterImpl(defaultScreen)) {
         MainContainer()
     }
 }
@@ -71,8 +75,8 @@ fun AppContentPreview() {
 
 @Composable
 fun MainContainer() {
-    val router = localRouter.current
-    router?.let {
+    val router = localRouterProvidable.current
+    router.let {
         val currentContent by it.currentScreen.collectAsStateWithLifecycle()
         Column {
             Text("top bar", Modifier.fillMaxWidth().background(Color.Red))
@@ -100,11 +104,11 @@ data object ScreenOne : Screen {
 
 @Composable
 fun ComponentOne() {
-    val router = localRouter.current
+    val router = localRouterProvidable.current
     Text(
         text = "navigate to two",
         modifier = Modifier.clickable {
-            router?.push(ScreenTwo)
+            router.push(ScreenTwo)
         },
     )
 }
@@ -116,11 +120,11 @@ data object ScreenTwo : Screen {
 
 @Composable
 fun ComponentTwo() {
-    val router = localRouter.current
+    val router = localRouterProvidable.current
     Text(
         text = "back to one",
         modifier = Modifier.clickable {
-            router?.pop()
+            router.pop()
         },
     )
 }
