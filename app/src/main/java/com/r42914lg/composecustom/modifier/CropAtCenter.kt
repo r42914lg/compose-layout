@@ -5,11 +5,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.node.LayoutModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.platform.InspectorInfo
@@ -59,7 +64,39 @@ fun PreviewCropAtCenter() {
     Box(Modifier.background(Color.White).size(200.dp)) {
         Text(
             text = "SAMPLE",
-            modifier = Modifier.cropAtCenter().background(Color.Blue)
+            modifier = Modifier
+                .cropAtCenter()
+                .background(Color.Blue)
+        )
+    }
+}
+
+@Preview
+@Composable
+fun PreviewCropAtCenter_via_layoutExt() {
+    val factor = remember { 0.25f }
+    Box(Modifier.background(Color.White).size(200.dp)) {
+        Text(
+            text = "SAMPLE",
+            modifier = Modifier
+                .layout { measurable, constraints ->
+                    val adjustedWidth = (constraints.maxWidth * factor).toInt()
+                    val adjustedHeight = (constraints.maxHeight * factor).toInt()
+                    val placeable = measurable.measure(
+                        constraints.copy(
+                            maxWidth = adjustedWidth,
+                            maxHeight = adjustedHeight,
+                            minWidth = adjustedWidth,
+                            minHeight = adjustedHeight,
+                        )
+                    )
+                    layout(placeable.width, placeable.height) {
+                        placeable.placeRelative(
+                            (constraints.maxWidth - adjustedWidth) / 2,
+                            (constraints.maxHeight - adjustedHeight) / 2
+                        )
+                    }
+                }.background(Color.Blue)
         )
     }
 }
