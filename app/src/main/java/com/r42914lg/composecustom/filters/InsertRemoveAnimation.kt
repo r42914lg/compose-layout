@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateListOf
@@ -26,9 +25,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-data class FilterItems(val data: List<Filter>)
+data class FilterItems(val data: List<Filter> = emptyList())
 
 data class DisplayItem(
     val filter: Filter,
@@ -50,18 +53,19 @@ fun Sample(
             }
         } else {
             filters.data.forEach { newFilter ->
-                val oldFilter =
+                val changedFilter =
                     displayItems.firstOrNull { it.filter.id == newFilter.id && it.filter.isSelected != newFilter.isSelected }
 
-                oldFilter?.let {
+                changedFilter?.let {
                     coroutineScope.launch {
-                        oldFilter.animation.animateTo(
+                        changedFilter.animation.animateTo(
                             targetValue = 0f,
                             animationSpec = tween(durationMillis = 300, easing = LinearEasing)
                         )
-                        displayItems.remove(oldFilter)
+                        displayItems.remove(changedFilter)
                         val anim = Animatable(0f)
-                        displayItems.add(DisplayItem(newFilter, anim))
+                        val position = if (newFilter.isSelected) 0 else displayItems.count { it.filter.isSelected }
+                        displayItems.add(position, DisplayItem(newFilter, anim))
                         coroutineScope.launch {
                             anim.animateTo(
                                 targetValue = 1f,
@@ -78,24 +82,24 @@ fun Sample(
         modifier = Modifier.fillMaxWidth(),
         content = {
             Column(
-                modifier = Modifier.animateContentSize()
+                modifier = Modifier
             ) {
                 displayItems.forEach { item ->
                     key(item.filter) {
                         val scale by item.animation.asState()
                         if (scale > 0f) {
-                        Box(
-                            modifier = Modifier.graphicsLayer {
-                                scaleX = scale
-                                scaleY = scale
-                                alpha = scale
-                            }
-                        ) {
-                            RenderFilter(item.filter) {
-                                onClick(it)
+                            Box(
+                                modifier = Modifier.graphicsLayer {
+                                    scaleX = scale
+                                    scaleY = scale
+                                    alpha = scale
+                                }
+                            ) {
+                                RenderFilter(item.filter) {
+                                    onClick(it)
+                                }
                             }
                         }
-                    }
                     }
                 }
             }
@@ -122,26 +126,42 @@ fun RenderFilter(filter: Filter, onClick: (Int) -> Unit) {
     }
 }
 
+class ScreenModel {
+    private val _state = MutableStateFlow(
+        FilterItems(
+            listOf(
+                Filter(1, "Filter 1", isSelected = false),
+                Filter(2, "Filter 2", isSelected = false),
+                Filter(3, "Filter 3", isSelected = false),
+                Filter(4, "Filter 4", isSelected = false),
+                Filter(5, "Filter 5", isSelected = false),
+                Filter(6, "Filter 6", isSelected = false),
+            )
+        )
+    )
+    val state = _state.asStateFlow()
+
+    fun onClick(id: Int) {
+        val currentList = state.value.data
+        val newList = mutableListOf<Filter>()
+        currentList.forEach {
+            if (it.id == id) {
+                newList.add(Filter(it.id, it.label, !it.isSelected))
+            } else {
+                newList.add(Filter(it.id, it.label, it.isSelected))
+            }
+        }
+        _state.update { FilterItems(newList) }
+    }
+}
+
 @Preview
 @Composable
 fun SamplePreview() {
-    val items = remember {
-        val list = mutableStateListOf<Filter>()
-        for (i in 0..5) {
-            list.add(Filter(i, "Filter $i", isSelected = false))
-        }
-        list
-    }
-    val sortedItems by remember {
-        derivedStateOf {
-            items.sortedWith(compareByDescending { it.isSelected })
-        }
-    }
-    Sample(FilterItems(sortedItems)) { id ->
-        val oldValue = items.find { it.id == id }
-//        items.remove(oldValue)
-        oldValue?.let {
-            items.add(it.copy(isSelected = oldValue.isSelected.not()))
-        }
+    val stateHolder = remember { ScreenModel() }
+    val state by stateHolder.state.collectAsStateWithLifecycle()
+
+    Sample(state) {
+       stateHolder.onClick(it)
     }
 }
