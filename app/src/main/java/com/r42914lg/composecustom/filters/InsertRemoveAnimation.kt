@@ -1,16 +1,16 @@
 package com.r42914lg.composecustom.filters
 
-import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -20,11 +20,16 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.LookaheadScope
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -74,36 +79,22 @@ fun Sample(
         }
     }
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        content = {
-            Column(
-                modifier = Modifier
+    displayItems.forEach { item ->
+        key(item.filter) {
+            val scale by item.animation.asState()
+            Box(
+                modifier = Modifier.graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    alpha = scale
+                }
             ) {
-                displayItems.forEach { item ->
-                    key(item.filter) {
-                        val scale by item.animation.asState()
-                        Box(
-                            modifier = Modifier.graphicsLayer {
-                                scaleX = scale
-                                scaleY = scale
-                                alpha = scale
-                            }
-                        ) {
-                            RenderFilter(item.filter) {
-                                onClick(it)
-                            }
-                        }
-                    }
+                RenderFilter(item.filter) {
+                    onClick(it)
                 }
             }
         }
-    )
-}
-
-@Composable
-fun Card(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    Column(modifier = modifier.padding(16.dp)) { content() }
+    }
 }
 
 @Composable
@@ -130,6 +121,9 @@ class ScreenModel {
                 Filter(4, "Filter 4", isSelected = false),
                 Filter(5, "Filter 5", isSelected = false),
                 Filter(6, "Filter 6", isSelected = false),
+                Filter(7, "Filter 4", isSelected = false),
+                Filter(8, "Filter 5", isSelected = false),
+                Filter(9, "Filter 6", isSelected = false),
             )
         )
     )
@@ -145,7 +139,7 @@ class ScreenModel {
                 newList.add(Filter(it.id, it.label, it.isSelected))
             }
         }
-        _state.update { FilterItems(newList) }
+        _state.update { FilterItems(newList.sortedByDescending { it.isSelected }) }
     }
 }
 
@@ -154,8 +148,34 @@ class ScreenModel {
 fun SamplePreview() {
     val stateHolder = remember { ScreenModel() }
     val state by stateHolder.state.collectAsStateWithLifecycle()
+    var expanded by rememberSaveable { mutableStateOf(true) }
 
-    Sample(state) {
-       stateHolder.onClick(it)
+    Column {
+        Row(
+            modifier = Modifier
+                .padding(top = 18.dp)
+                .clickable { expanded = expanded.not() }
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                modifier = Modifier.weight(1f),
+                text = "Filter Name",
+                fontWeight = FontWeight.Bold
+            )
+        }
+        AnimatedVisibility(expanded) {
+            LookaheadScope {
+                FlowRow(
+                    modifier = Modifier.padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Sample(state) {
+                        stateHolder.onClick(it)
+                    }
+                }
+            }
+        }
     }
 }
